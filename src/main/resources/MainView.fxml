@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="blockchain.controllers.MainController">
+    <children>
+        <!-- Username Section -->
+        <Label layoutX="20.0" layoutY="20.0" text="Username:" />
+        <TextField fx:id="usernameField" layoutX="100.0" layoutY="16.0" prefWidth="150.0" />
+        <Button fx:id="createAccountButton" layoutX="270.0" layoutY="16.0" onAction="#handleCreateAccount" text="Create Account" />
+
+        <!-- Transaction Section -->
+        <Label layoutX="20.0" layoutY="60.0" text="Sender:" />
+        <ComboBox fx:id="senderComboBox" layoutX="100.0" layoutY="56.0" prefWidth="150.0" />
+        <Label layoutX="270.0" layoutY="60.0" text="Recipient:" />
+        <ComboBox fx:id="recipientComboBox" layoutX="350.0" layoutY="56.0" prefWidth="150.0" />
+        <Label layoutX="520.0" layoutY="60.0" text="Amount:" />
+        <TextField fx:id="amountField" layoutX="580.0" layoutY="56.0" prefWidth="100.0" />
+        <Button fx:id="addButton" layoutX="700.0" layoutY="56.0" onAction="#handleAddTransaction" text="Add Transaction" />
+
+        <!-- Action Buttons -->
+        <Button fx:id="mineButton" layoutX="20.0" layoutY="100.0" onAction="#handleMineBlock" text="Mine Block" />
+
+        <!-- Blockchain Details Table -->
+        <TableView fx:id="blockDetailsTable" layoutX="20.0" layoutY="140.0" prefHeight="250.0" prefWidth="900.0">
+            <columns>
+                <TableColumn fx:id="blockHashColumn" text="Block Hash" prefWidth="300.0" />
+                <TableColumn fx:id="transactionsColumn" text="Transactions" prefWidth="400.0" />
+                <TableColumn fx:id="minerColumn" text="Miner" prefWidth="200.0" />
+            </columns>
+        </TableView>
+
+        <!-- Accounts List View -->
+        <Label layoutX="20.0" layoutY="400.0" text="Accounts:" />
+        <ListView fx:id="accountsListView" layoutX="20.0" layoutY="420.0" prefHeight="120.0" prefWidth="300.0" />
+
+        <!-- Mining Logs -->
+        <Label layoutX="350.0" layoutY="400.0" text="Mining Logs:" />
+        <ListView fx:id="miningListView" layoutX="350.0" layoutY="420.0" prefHeight="120.0" prefWidth="570.0" />
+    </children>
+</AnchorPane>

@@ -4,7 +4,9 @@ import akka.actor.typed.{ActorSystem, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
 import blockchain.actors.Blockchainer
 import blockchain.controllers.MainController
+import javafx.{scene => jfxs}
 import scalafx.application.JFXApp
+import scalafx.application.JFXApp.PrimaryStage
 import scalafx.scene.Scene
 import scalafxml.core.{FXMLLoader, NoDependencyResolver}
 import scalafx.Includes._
@@ -27,25 +29,41 @@ object Main extends JFXApp {
   // Initialize ActorSystem
   val actorSystem: ActorSystem[Peer.Command] = ActorSystem(rootBehavior, "BitcoinNetwork")
 
-  // Load FXML
-  val loader = new FXMLLoader(getClass.getResource("/MainView.fxml"), NoDependencyResolver)
-  try {
-    loader.load()
-    val controller = loader.getController[MainController#Controller]
-    controller.setActorSystem(actorSystem)
-  } catch {
-    case ex: Exception =>
-      println(s"Error loading FXML: ${ex.getMessage}")
-      sys.exit(1)
+  // Configure the primary stage
+  stage = new PrimaryStage {
+    // Retrieve the port from the configuration
+    val port = actorSystem.settings.config.getInt("akka.remote.artery.canonical.port")
+    title = s"Bitcoin Scala - Node ${port - 2550}"
+    width = 1000
+    height = 700
   }
 
-  // Setup UI
-  stage = new JFXApp.PrimaryStage {
-    title = "Peer-to-Peer Blockchain"
-    scene = new Scene(loader.getRoot[javafx.scene.layout.AnchorPane])
-    onCloseRequest = _ => {
-      println("Shutting down ActorSystem...")
-      actorSystem.terminate()
+  // Load the main application UI
+  def showMainApp(): Unit = {
+    // Use absolute path by starting with '/'
+    val resource = getClass.getResource("/blockchain/MainView.fxml")
+    if (resource == null) {
+      throw new IllegalArgumentException("Cannot find MainView.fxml")
     }
+    val loader = new FXMLLoader(resource, NoDependencyResolver)
+    loader.load()
+
+    // Set the scene with the loaded root node
+    val root = loader.getRoot[jfxs.layout.AnchorPane]
+    stage.scene = new Scene(root)
+
+    // Set the actor system for the controller
+    val controller = loader.getController[MainController#Controller]
+    controller.setActorSystem(actorSystem)
+  }
+
+  // Show the main application window
+  showMainApp()
+
+  // Close the window and terminate ActorSystem when "X" button is pressed
+  stage.setOnCloseRequest { _ =>
+    println("System is closing...")
+    actorSystem.terminate()
+    sys.exit()
   }
 }

@@ -1,15 +1,14 @@
+// src/main/scala/blockchain/controllers/MainController.scala
+
 package blockchain.controllers
 
-import akka.actor.typed.ActorRef
-import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.eventstream.EventStream
 import akka.actor.typed.scaladsl.Behaviors
-import blockchain.actors.Blockchainer
-import blockchain.Peer
+import akka.actor.typed.{ActorRef, Behavior}
+import blockchain.actors.{Blockchainer, Peer}
 import blockchain.model.TransactionItem
 import scalafx.application.Platform
-import scalafx.beans.property.StringProperty
 import scalafx.collections.ObservableBuffer
 import scalafx.event.ActionEvent
 import scalafx.scene.control._
@@ -31,42 +30,76 @@ class MainController(
                       private val minerColumn: TableColumn[(String, String, String), String]
                     ) {
 
-  private var blockchainerActor: ActorRef[Blockchainer.Command] = _
+  // List of ActorSystems representing different peers (if needed)
+  private var actorSystems: List[ActorSystem[Nothing]] = List.empty
+
+  // List of Peer actors
+  private var peerActors: List[ActorRef[Peer.Command]] = List.empty
+
+  // List of existing Blockchainer actors
+  private var blockchainerActors: List[ActorRef[Blockchainer.Command]] = List.empty
+
+  // Map to keep track of account balances
   private val accountBalances: mutable.Map[String, Double] = mutable.Map.empty
+
+  // Data for the blockchain table
   private val blockDetailsData: ObservableBuffer[(String, String, String)] = ObservableBuffer()
 
-  def setActorSystem(system: ActorSystem[Nothing]): Unit = {
-    blockchainerActor = system.systemActorOf(Blockchainer(), "Blockchainer")
-    blockHashColumn.cellValueFactory = cellData => StringProperty(cellData.value._1)
-    transactionsColumn.cellValueFactory = cellData => StringProperty(cellData.value._2)
-    minerColumn.cellValueFactory = cellData => StringProperty(cellData.value._3)
-    blockDetailsTable.items = blockDetailsData
+  /**
+   * Initialize the controller with existing ActorSystems and their corresponding Blockchainer actors.
+   *
+   * @param systems           List of ActorSystems
+   * @param blockchainerRefs  List of existing Blockchainer actor references
+   * @param peerRefs          List of existing Peer actor references
+   */
+  def setActorSystems(systems: List[ActorSystem[Nothing]],
+                      blockchainerRefs: List[ActorRef[Blockchainer.Command]],
+                      peerRefs: List[ActorRef[Peer.Command]]): Unit = {
+    actorSystems = systems
+    blockchainerActors = blockchainerRefs
+    peerActors = peerRefs
 
-    // Listen for mined block events
-    val blockListener = system.systemActorOf(
-      Behaviors.receiveMessage[Blockchainer.BlockMined] { message =>
-        Platform.runLater {
-          // Add block details to table
-          val transactionsDetails = message.block.transactions.items.map { t =>
-            s"${t.sender} -> ${t.recipient}: ${t.amount}"
-          }.mkString("; ")
-          val blockEntry = (message.block.hash, transactionsDetails, "Miner: System")
-          blockDetailsData += blockEntry
+    // Setup UI bindings
+    setupUI()
 
-          // Log mining details
-          miningListView.getItems.add(s"Mined block: ${message.block.hash}")
+    // Subscribe to BlockMined events from all ActorSystems
+    actorSystems.foreach { system =>
+      // Spawn a listener actor for BlockMined events
+      val listener: ActorRef[Blockchainer.BlockMined] =
+        system.systemActorOf(
+          Behaviors.receiveMessage[Blockchainer.BlockMined] { message =>
+            Platform.runLater {
+              // Update block details in the UI
+              val transactionsDetails = message.block.transactions.items.map { t =>
+                s"${t.sender} -> ${t.recipient}: ${t.amount}"
+              }.mkString("; ")
+              val miner = "System" // Adjust if miner information is available
+              val blockEntry = (message.block.hash, transactionsDetails, s"Miner: $miner")
+              blockDetailsData += blockEntry
 
-          // Update account balances in the UI
-          updateAccountBalances()
-        }
-        Behaviors.same
-      },
-      "BlockListener"
-    )
+              // Log mining details
+              miningListView.getItems.add(s"Mined block: ${message.block.hash}")
+              updateAccountBalances()
+            }
+            Behaviors.same
+          },
+          s"BlockMinedListener-${system.name}"
+        )
 
-    system.eventStream ! EventStream.Subscribe(blockListener)
+      // Subscribe the listener to BlockMined events
+      system.eventStream ! EventStream.Subscribe(listener)
+    }
   }
 
+  // Initialize UI components
+  private def setupUI(): Unit = {
+    blockHashColumn.cellValueFactory = cellData => scalafx.beans.property.StringProperty(cellData.value._1)
+    transactionsColumn.cellValueFactory = cellData => scalafx.beans.property.StringProperty(cellData.value._2)
+    minerColumn.cellValueFactory = cellData => scalafx.beans.property.StringProperty(cellData.value._3)
+    blockDetailsTable.items = blockDetailsData
+  }
+
+  // Handle Create Account action
   def handleCreateAccount(event: ActionEvent): Unit = {
     val username = usernameField.getText.trim
     if (username.nonEmpty && !accountBalances.contains(username)) {
@@ -84,6 +117,7 @@ class MainController(
     }
   }
 
+  // Handle Add Transaction action
   def handleAddTransaction(event: ActionEvent): Unit = {
     val sender = Option(senderComboBox.getValue).getOrElse("")
     val recipient = Option(recipientComboBox.getValue).getOrElse("")
@@ -112,10 +146,16 @@ class MainController(
       return
     }
 
+    // Update balances
     accountBalances(sender) -= amount
     accountBalances(recipient) += amount
     val transaction = TransactionItem(sender, recipient, amount, System.currentTimeMillis())
-    blockchainerActor ! Blockchainer.AddTransaction(transaction)
+
+    // Broadcast transaction to all peers
+    peerActors.foreach { peer =>
+      println(s"Sending transaction to peer: ${peer.path.name}")
+      peer ! Peer.BroadcastTransaction(transaction)
+    }
 
     Platform.runLater {
       miningListView.getItems.add(s"Transaction added: $sender -> $recipient: $amount")
@@ -124,17 +164,29 @@ class MainController(
     }
   }
 
+  // Handle Mine Block action
   def handleMineBlock(event: ActionEvent): Unit = {
-    blockchainerActor ! Blockchainer.MineBlock
     Platform.runLater {
       miningListView.getItems.add("Mining block...")
     }
+
+    // Trigger mining on all existing Blockchainer actors
+    blockchainerActors.foreach { blockchainer =>
+      blockchainer ! Blockchainer.MineBlock
+    }
   }
 
+  // Update the account balances in the UI
   private def updateAccountBalances(): Unit = {
     val updatedAccounts = accountBalances.map { case (user, balance) =>
-      s"$user (Balance: $balance)"
+      f"$user (Balance: $balance%.2f)"
     }.toList
     accountsListView.getItems.setAll(updatedAccounts: _*)
+  }
+
+  // Initialize peers with their configurations (if needed)
+  def initializePeers(peerConfigs: List[(String, Int)]): Unit = {
+    println(s"Initialized ${peerConfigs.size} peers.")
+    // Implement peer initialization if required
   }
 }

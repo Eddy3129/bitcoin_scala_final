@@ -1,9 +1,7 @@
+// src/main/scala/blockchain/model/Block.scala
+
 package blockchain.model
 
-import blockchain.util.Util._
-import scalafx.beans.property.{StringProperty, IntegerProperty}
-
-// Core blockchain models
 sealed trait Block {
   def hash: String
   def hashPrev: String
@@ -30,10 +28,3 @@ case class LinkedBlock(
                         difficulty: Int,
                         nonce: Long
                       ) extends Block
-
-// UI-related model for block details table
-case class BlockDetails(
-                         blockHash: StringProperty,      // Holds the block hash
-                         transactions: StringProperty,   // Holds transaction details as a single string
-                         miner: StringProperty           // Holds miner information
-                       )

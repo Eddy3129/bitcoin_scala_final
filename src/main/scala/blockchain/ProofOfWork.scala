@@ -1,10 +1,13 @@
+// src/main/scala/blockchain/ProofOfWork.scala
+
 package blockchain
 
-import blockchain.model.{LinkedBlock, Transactions}
+import blockchain.model.{Block, LinkedBlock, Transactions}
+import blockchain.util.Util
 import java.security.MessageDigest
 
 object ProofOfWork {
-  val difficulty: Int = 4 // Adjust difficulty for testing
+  val difficulty: Int = 4 // Adjust difficulty as needed
 
   def generateProof(transactions: Transactions, hashPrev: String, timestamp: Long): LinkedBlock = {
     var nonce = 0L

@@ -1,10 +1,8 @@
-// src/main/scala/blockchain/Node.scala
-
 package blockchain
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
-import blockchain.Upnp.UpnpManager  // Updated import
+import blockchain.Upnp.UpnpManager
 import blockchain.Upnp.UpnpManager.AddPortMapping
 import com.typesafe.config.ConfigFactory
 import scalafx.application.{JFXApp, Platform}
@@ -19,7 +17,7 @@ object Node extends JFXApp {
 
   // Configuration parameters
   val hostname: String = "192.168.100.10" // Change to your IP configuration
-  val port: Int = 2553 // Change for each new peer node, e.g., 2552, 2553...
+  val port: Int = 2552 // Change for each new peer node, e.g., 2552, 2553...
   val seedNodes: List[String] = List(
     "akka://BitcoinNetwork@192.168.100.10:2551" // Change to your IP configuration
   )
@@ -36,13 +34,16 @@ object Node extends JFXApp {
        |""".stripMargin).withFallback(ConfigFactory.load())
   )
 
-  // Spawn the Blockchainer actor
-  val blockchainer: ActorRef[Blockchainer.Command] =
-    system.systemActorOf(Blockchainer(), s"Blockchainer-$port")
-
-  // Spawn the Peer actor with a reference to Blockchainer
+  // Spawn the Peer actor first
   val peer: ActorRef[Peer.Command] =
-    system.systemActorOf(Peer(blockchainer), s"Peer-$port")
+    system.systemActorOf(Peer(null), s"Peer-$port") // Temporary `null` to avoid cyclic dependency
+
+  // Spawn the Blockchainer actor and pass the Peer reference
+  val blockchainer: ActorRef[Blockchainer.Command] =
+    system.systemActorOf(Blockchainer(peer), s"Blockchainer-$port")
+
+  // Update the Peer actor with the Blockchainer reference
+  peer ! Peer.UpdateBlockchainer(blockchainer) // Assuming UpdateBlockchainer is implemented in Peer
 
   // Spawn the UpnpManager actor and add port mappings
   val upnpManager: ActorRef[UpnpManager.Command] =

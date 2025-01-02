@@ -4,19 +4,19 @@ import akka.actor.typed.eventstream.EventStream
 import akka.actor.typed.receptionist.{Receptionist, ServiceKey}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-import blockchain.model.{Block, LinkedBlock, TransactionItem, JsonSerializable}
+import blockchain.model.{LinkedBlock, TransactionItem, JsonSerializable}
 
 object Peer {
   val PeerServiceKey: ServiceKey[Command] = ServiceKey("PeerService")
 
-  // All commands must extend JsonSerializable for serialization
   sealed trait Command extends JsonSerializable
   case class BroadcastTransaction(transaction: TransactionItem) extends Command
   case class BroadcastBlock(block: LinkedBlock) extends Command
+  case class UpdateBlockchainer(blockchainer: ActorRef[Blockchainer.Command]) extends Command
   case object DiscoverPeers extends Command
   private case class PeerDiscovered(peers: Set[ActorRef[Command]]) extends Command
 
-  def apply(blockchainer: ActorRef[Blockchainer.Command]): Behavior[Command] = {
+  def apply(initialBlockchainer: ActorRef[Blockchainer.Command]): Behavior[Command] = {
     Behaviors.setup { context =>
       context.log.info(s"Initializing Peer ${context.self.path.name}")
 
@@ -32,8 +32,10 @@ object Peer {
       context.system.receptionist ! Receptionist.Subscribe(PeerServiceKey, listingAdapter)
 
       var peers: Set[ActorRef[Command]] = Set.empty
+      var receivedBlocks: Set[String] = Set.empty
       var transactionQueue: List[TransactionItem] = List.empty
       var processedTransactions: Set[String] = Set.empty // Tracks processed transaction IDs
+      var blockchainer: ActorRef[Blockchainer.Command] = initialBlockchainer // Dynamic blockchainer reference
 
       Behaviors.receiveMessage {
         case DiscoverPeers =>
@@ -48,12 +50,10 @@ object Peer {
 
         case BroadcastTransaction(transaction) =>
           if (!processedTransactions.contains(transaction.id)) {
-            // Only process new transactions
             context.log.info(s"Peer at ${context.self.path} received new transaction: $transaction")
             processedTransactions += transaction.id
-            blockchainer ! Blockchainer.AddTransaction(transaction) // Send to Blockchainer
+            blockchainer ! Blockchainer.AddTransaction(transaction)
 
-            // Broadcast to other peers
             peers.foreach { peer =>
               if (peer != context.self) {
                 context.log.info(s"Broadcasting transaction to peer: ${peer.path}")
@@ -66,10 +66,23 @@ object Peer {
           Behaviors.same
 
         case BroadcastBlock(block) =>
-          peers.foreach { peer =>
-            context.log.info(s"Broadcasting block to peer: ${peer.path.name}")
-            peer ! BroadcastBlock(block)
+          if (!receivedBlocks.contains(block.hash)) {
+            receivedBlocks += block.hash
+            context.log.info(s"Broadcasting block to peers: ${block.hash}")
+            peers.foreach { peer =>
+              if (peer != context.self) {
+                peer ! BroadcastBlock(block)
+              }
+            }
+            blockchainer ! Blockchainer.BlockMined(block)
+          } else {
+            context.log.info(s"Ignored duplicate block: ${block.hash}")
           }
+          Behaviors.same
+
+        case UpdateBlockchainer(newBlockchainer) =>
+          blockchainer = newBlockchainer
+          context.log.info(s"Updated Blockchainer reference for Peer: ${context.self.path}")
           Behaviors.same
       }
     }

@@ -17,6 +17,7 @@ object Blockchainer {
     var blockchain: List[Block] = List(RootBlock)
     var transactionQueue: List[TransactionItem] = List.empty
     var isMiningPaused: Boolean = false
+    var currentMiningBlock: Option[LinkedBlock] = None
 
     context.log.info(s"Initialized Blockchainer at ${context.self.path}")
 
@@ -38,11 +39,11 @@ object Blockchainer {
         transactionQueue = List.empty // Clear the queue after mining
 
         val newBlock = ProofOfWork.generateProof(transactions, prevBlock.hash, System.currentTimeMillis)
+        currentMiningBlock = Some(newBlock)
         blockchain = newBlock :: blockchain
 
         context.log.info(s"Mined new block: ${newBlock.hash}, Nonce: ${newBlock.nonce}, Previous Hash: ${newBlock.hashPrev}")
 
-        // Broadcast mined block to peers
         peer ! Peer.BroadcastBlock(newBlock)
         Behaviors.same
 
@@ -55,19 +56,28 @@ object Blockchainer {
         Behaviors.same
 
       case BlockMined(block) =>
-        isMiningPaused = true // Pause mining during block validation
-        val lastBlock = blockchain.head
-        context.log.info(s"Received block with hash: ${block.hash}, Previous Hash: ${block.hashPrev}, Last Block Hash: ${lastBlock.hash}")
-
-        if ((lastBlock == RootBlock && block.hashPrev == RootBlock.hash) || block.hashPrev == lastBlock.hash) {
-          blockchain = block :: blockchain
-          transactionQueue = transactionQueue.filterNot(t => block.transactions.items.exists(_.id == t.id)) // Remove mined transactions
-          context.log.info(s"Added received block to blockchain: ${block.hash}")
+        if (currentMiningBlock.exists(_.hash == block.hash)) {
+          // Skip validation if this is a self-mined block
+          context.log.info(s"Ignored validation of self-mined block: ${block.hash}")
+          currentMiningBlock = None
+          isMiningPaused = false
+          Behaviors.same
         } else {
-          context.log.info(s"Rejected block with invalid hashPrev: ${block.hashPrev}")
+          // Proceed with validation for blocks received from peers
+          context.log.info(s"Validating block: ${block.hash} with nonce: ${block.nonce}")
+          val lastBlock = blockchain.head
+          val validBlock = ProofOfWork.calculateHash(block.transactions, block.hashPrev, block.timestamp, block.nonce) == block.hash
+
+          if (validBlock && (block.hashPrev == lastBlock.hash || (lastBlock == RootBlock && block.hashPrev == RootBlock.hash))) {
+            blockchain = block :: blockchain
+            transactionQueue = transactionQueue.filterNot(t => block.transactions.items.exists(_.id == t.id)) // Remove mined transactions
+            context.log.info(s"Validation successful. Added block to blockchain: ${block.hash}")
+          } else {
+            context.log.info(s"Validation failed. Block is invalid: ${block.hash}")
+          }
+          isMiningPaused = false
+          Behaviors.same
         }
-        isMiningPaused = false // Resume mining
-        Behaviors.same
     }
-  }
+    }
 }

@@ -26,7 +26,7 @@ object Node extends JFXApp {
   val rootBehavior: Behavior[Any] = Behaviors.ignore[Any]
 
   // Initialize the actor system
-  val system: ActorSystem[Any] = ActorSystem(rootBehavior, "BitcoinNetwork", ConfigFactory.parseString(
+  var system: ActorSystem[Any] = ActorSystem(rootBehavior, "BitcoinNetwork", ConfigFactory.parseString(
     s"""
        |akka.remote.artery.canonical.hostname = "$hostname"
        |akka.remote.artery.canonical.port = $port
@@ -62,10 +62,11 @@ object Node extends JFXApp {
     scene = new Scene(root)
 
     // Set up the controller with the actor system and actor references
-    val controller = loader.getController[MainController#Controller]
+    val controller = loader.getController[MainController#Controller]  // Use MainController directly
     controller.setActorSystems(
       peerRefs = List(peer),
-      blockchainerRefs = List(blockchainer)
+      blockchainerRefs = List(blockchainer),
+      system = system  // Pass 'system' as a parameter
     )
   }
 

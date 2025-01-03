@@ -10,8 +10,9 @@ object Blockchainer {
   case class AddTransaction(transaction: TransactionItem) extends Command
   case object MineBlock extends Command
   case class GetBlockchain(replyTo: ActorRef[BlockchainState]) extends Command
-  case class BlockchainState(blocks: List[Block])
   case class BlockMined(block: LinkedBlock) extends Command
+  case class BlockchainState(blocks: List[Block], isMining: Boolean)
+  case class TransactionReceived(transaction: TransactionItem) extends Command
 
   def apply(peer: ActorRef[Peer.Command]): Behavior[Command] = Behaviors.setup { context =>
     var blockchain: List[Block] = List(RootBlock)
@@ -26,6 +27,8 @@ object Blockchainer {
         if (!transactionQueue.exists(_.id == transaction.id)) {
           context.log.info(s"Received transaction: $transaction")
           transactionQueue :+= transaction
+          context.system.eventStream.tell(akka.actor.typed.eventstream.EventStream.Publish(TransactionReceived(transaction)))
+          // Add this line
         } else {
           context.log.info(s"Ignored duplicate transaction: $transaction")
         }
@@ -35,6 +38,7 @@ object Blockchainer {
         val prevBlock = blockchain.head
         context.log.info(s"Starting mining with previous hash: ${prevBlock.hash}")
 
+        isMiningPaused = true  // Set mining status
         val transactions = Transactions(transactionQueue, System.currentTimeMillis)
         transactionQueue = List.empty // Clear the queue after mining
 
@@ -45,6 +49,7 @@ object Blockchainer {
         context.log.info(s"Mined new block: ${newBlock.hash}, Nonce: ${newBlock.nonce}, Previous Hash: ${newBlock.hashPrev}")
 
         peer ! Peer.BroadcastBlock(newBlock)
+        isMiningPaused = false  // Reset mining status
         Behaviors.same
 
       case MineBlock =>
@@ -52,7 +57,7 @@ object Blockchainer {
         Behaviors.same
 
       case GetBlockchain(replyTo) =>
-        replyTo ! BlockchainState(blockchain)
+        replyTo ! BlockchainState(blockchain, isMiningPaused)
         Behaviors.same
 
       case BlockMined(block) =>

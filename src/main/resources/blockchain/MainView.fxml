@@ -1,51 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
 
-<AnchorPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="blockchain.controllers.MainController">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="800.0" prefWidth="1200.0" styleClass="backgroundImage" stylesheets="@style.css" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="blockchain.controllers.MainController">
     <children>
-        <!-- Username Section -->
-        <Label layoutX="20.0" layoutY="20.0" text="Username:" />
-        <TextField fx:id="usernameField" layoutX="100.0" layoutY="16.0" prefWidth="150.0" />
-        <Button fx:id="createAccountButton" layoutX="270.0" layoutY="16.0" onAction="#handleCreateAccount" text="Create Account" />
+        <VBox alignment="CENTER" spacing="20" styleClass="main-container" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
+            <padding>
+                <Insets bottom="10" left="10" right="10" top="10" />
+            </padding>
 
-        <!-- Transaction Section -->
-        <Label layoutX="20.0" layoutY="60.0" text="Sender:" />
-        <ComboBox fx:id="senderComboBox" layoutX="100.0" layoutY="56.0" prefWidth="150.0" />
-        <Label layoutX="270.0" layoutY="60.0" text="Recipient:" />
-        <ComboBox fx:id="recipientComboBox" layoutX="350.0" layoutY="56.0" prefWidth="150.0" />
-        <Label layoutX="520.0" layoutY="60.0" text="Amount:" />
-        <TextField fx:id="amountField" layoutX="580.0" layoutY="56.0" prefWidth="100.0" />
-        <Button fx:id="addButton" layoutX="700.0" layoutY="56.0" onAction="#handleAddTransaction" text="Add Transaction" />
+            <children>
+                <HBox alignment="CENTER" spacing="15" styleClass="header">
+                    <Text fill="#e8850d" styleClass="title" text="Bitcoin Simulator" />
+                    <Text fill="#f8b407" styleClass="subtitle" text="with AKKA" />
+                </HBox>
 
-        <!-- Action Buttons -->
-        <Button fx:id="mineButton" layoutX="20.0" layoutY="100.0" onAction="#handleMineBlock" text="Mine Block" />
+                <HBox alignment="CENTER_LEFT" spacing="15" styleClass="input-section">
+                    <Label styleClass="label-large" text="Username:" />
+                    <TextField fx:id="usernameField" prefWidth="200" promptText="Username" styleClass="input-field-large" />
+                    <Button fx:id="createAccountButton" onAction="#handleCreateAccount" styleClass="button-large" text="Create Account" />
+                </HBox>
 
-        <!-- Blockchain Details Table -->
-        <TableView fx:id="blockDetailsTable" layoutX="20.0" layoutY="140.0" prefHeight="250.0" prefWidth="900.0">
-            <columns>
-                <TableColumn fx:id="blockHashColumn" text="Block Hash" prefWidth="300.0" />
-                <TableColumn fx:id="transactionsColumn" text="Transactions" prefWidth="400.0" />
-                <TableColumn fx:id="minerColumn" text="Miner" prefWidth="200.0" />
-            </columns>
-        </TableView>
+                <HBox alignment="CENTER_LEFT" spacing="15" styleClass="input-section">
+                    <Label styleClass="label-large" text="Sender:" />
+                    <ComboBox fx:id="senderComboBox" prefWidth="200" styleClass="combo-box-large" />
+                    <Label styleClass="label-large" text="Recipient:" />
+                    <ComboBox fx:id="recipientComboBox" prefWidth="200" styleClass="combo-box-large" />
+                    <Label styleClass="label-large" text="Amount:" />
+                    <TextField fx:id="amountField" prefWidth="150" styleClass="input-field-large" />
+                    <Text styleClass="label-large" text="BTC" />
+                    <Button fx:id="addButton" onAction="#handleAddTransaction" styleClass="button-large" text="Add Transaction" />
+                </HBox>
 
-        <!-- Accounts List View -->
-        <Label layoutX="20.0" layoutY="400.0" text="Accounts:" />
-        <ListView fx:id="accountsListView" layoutX="20.0" layoutY="420.0" prefHeight="120.0" prefWidth="300.0" />
+                <HBox alignment="CENTER_LEFT" spacing="15" styleClass="button-section">
+                    <Button fx:id="mineButton" onAction="#handleMineBlock" styleClass="button-large" text="Mine Block" />
+                </HBox>
 
-        <!-- Mempool -->
-        <Label layoutX="350.0" layoutY="400.0" text="Mempool:" />
-        <ListView fx:id="mempoolListView" layoutX="350.0" layoutY="420.0" prefHeight="120.0" prefWidth="250.0" />
+                <Label fx:id="statusLabel" styleClass="status-label" text="Status: Ready" />
 
-        <!-- Mining Logs -->
-        <Label layoutX="630.0" layoutY="400.0" text="Mining Logs:" />
-        <ListView fx:id="miningListView" layoutX="630.0" layoutY="420.0" prefHeight="120.0" prefWidth="290.0" />
+                <HBox alignment="CENTER" spacing="20" VBox.vgrow="ALWAYS">
+                    <VBox spacing="10" styleClass="list-container" HBox.hgrow="ALWAYS">
+                        <Label styleClass="label-large" text="Mempool:" />
+                        <ListView fx:id="mempoolListView" styleClass="list-view-large" VBox.vgrow="ALWAYS" />
+                        <Label styleClass="label-large" text="Accounts:" />
+                        <ListView fx:id="accountsListView" styleClass="list-view-large" VBox.vgrow="ALWAYS" />
+                    </VBox>
 
-        <!-- Validation Logs -->
-        <Label layoutX="20.0" layoutY="550.0" text="Validation Logs:" />
-        <ListView fx:id="validationListView" layoutX="20.0" layoutY="570.0" prefHeight="120.0" prefWidth="900.0" />
+                    <VBox spacing="10" styleClass="list-container" HBox.hgrow="ALWAYS">
+                        <Label styleClass="label-large" text="Blockchain:" />
+                        <ListView fx:id="blockchainListView" styleClass="list-view-large" VBox.vgrow="ALWAYS" />
+                        <Label styleClass="label-large" text="Validation Logs:" />
+                        <ListView fx:id="validationListView" styleClass="list-view-large" VBox.vgrow="ALWAYS" />
+                    </VBox>
+
+                    <VBox spacing="10" styleClass="list-container" HBox.hgrow="ALWAYS">
+                        <Label styleClass="label-large" text="Mining Logs:" />
+                        <ListView fx:id="miningListView" styleClass="list-view-large" VBox.vgrow="ALWAYS" />
+                    </VBox>
+                </HBox>
+            </children>
+        </VBox>
     </children>
 </AnchorPane>
-

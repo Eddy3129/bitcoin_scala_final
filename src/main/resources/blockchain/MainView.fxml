@@ -35,8 +35,17 @@
         <Label layoutX="20.0" layoutY="400.0" text="Accounts:" />
         <ListView fx:id="accountsListView" layoutX="20.0" layoutY="420.0" prefHeight="120.0" prefWidth="300.0" />
 
+        <!-- Mempool -->
+        <Label layoutX="350.0" layoutY="400.0" text="Mempool:" />
+        <ListView fx:id="mempoolListView" layoutX="350.0" layoutY="420.0" prefHeight="120.0" prefWidth="250.0" />
+
         <!-- Mining Logs -->
-        <Label layoutX="350.0" layoutY="400.0" text="Mining Logs:" />
-        <ListView fx:id="miningListView" layoutX="350.0" layoutY="420.0" prefHeight="120.0" prefWidth="570.0" />
+        <Label layoutX="630.0" layoutY="400.0" text="Mining Logs:" />
+        <ListView fx:id="miningListView" layoutX="630.0" layoutY="420.0" prefHeight="120.0" prefWidth="290.0" />
+
+        <!-- Validation Logs -->
+        <Label layoutX="20.0" layoutY="550.0" text="Validation Logs:" />
+        <ListView fx:id="validationListView" layoutX="20.0" layoutY="570.0" prefHeight="120.0" prefWidth="900.0" />
     </children>
 </AnchorPane>
+

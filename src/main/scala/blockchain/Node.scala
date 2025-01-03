@@ -17,7 +17,7 @@ object Node extends JFXApp {
 
   // Configuration parameters
   val hostname: String = "192.168.100.10" // Change to your IP configuration
-  val port: Int = 2552 // Change for each new peer node, e.g., 2552, 2553...
+  val port: Int = 2553 // Change for each new peer node, e.g., 2552, 2553...
   val seedNodes: List[String] = List(
     "akka://BitcoinNetwork@192.168.100.10:2551" // Change to your IP configuration
   )
@@ -64,9 +64,8 @@ object Node extends JFXApp {
     // Set up the controller with the actor system and actor references
     val controller = loader.getController[MainController#Controller]
     controller.setActorSystems(
-      systems = List(system),
-      blockchainerRefs = List(blockchainer),
-      peerRefs = List(peer)
+      peerRefs = List(peer),
+      blockchainerRefs = List(blockchainer)
     )
   }
 

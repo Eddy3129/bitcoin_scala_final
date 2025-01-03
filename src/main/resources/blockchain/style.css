@@ -69,13 +69,13 @@
 .list-view-large {
     -fx-background-color: #2a2a2a;
     -fx-control-inner-background: #1a1a1a;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 }
 
 .list-cell {
     -fx-background-color: #2a2a2a;
     -fx-text-fill: #d8d8d8;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
     -fx-padding: 8px;
 }
 
